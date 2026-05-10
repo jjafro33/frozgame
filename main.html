@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FRO GAMEZ - Play Online</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #3b1c8d;
+            --card-bg: #ffffff;
+            --text: #333;
+            --accent: #ff0080;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 20% 20%, #4c26b3 0%, transparent 40%),
+                              radial-gradient(circle at 80% 80%, #2d156b 0%, transparent 40%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+        header h1 {
+            font-size: 3rem;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .game-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: var(--text);
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 8px 0 #2d156b;
+            position: relative;
+            overflow: hidden;
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 0 #2d156b;
+        }
+        .game-card:active {
+            transform: translateY(2px);
+            box-shadow: 0 4px 0 #2d156b;
+        }
+        .game-card {
+            opacity: 0;
+            animation: cardEntrance 0.6s ease-out forwards;
+        }
+        @keyframes cardEntrance {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .game-card i, .game-card .emoji {
+            font-size: 4rem;
+            margin-bottom: 10px;
+        }
+        .game-card span {
+            font-weight: bold;
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 0 10px;
+        }
+        /* Specific Card Styles */
+        .card-subway { background: linear-gradient(135deg, #ff6b00, #ff0080); color: white; }
+        .card-go { background: linear-gradient(135deg, #DEB887, #8B4513); color: white; }
+        .card-placeholder { background: #eee; color: #999; }
+        
+        .badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--accent);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>FRO GAMEZ</h1>
+    </header>
+    <div class="container">
+        <div class="game-grid">
+            <!-- 1st Card: Subway Surfers (index.html) -->
+            <a href="index.html" class="game-card card-subway" style="animation-delay: 0.1s">
+                <span class="badge">HOT</span>
+                <div class="emoji">🏃</div>
+                <span>Subway Surfers</span>
+            </a>
+
+            <!-- 2nd Card: Go Game (gogame.html) -->
+            <a href="gogame.html" class="game-card card-go" style="animation-delay: 0.2s">
+                <div class="emoji">棋</div>
+                <span>Go Game</span>
+            </a>
+
+            <!-- 3rd Card: Chess Master (chess.html) -->
+            <a href="chess.html" class="game-card" style="background: linear-gradient(135deg, #444, #222); color: white; animation-delay: 0.3s">
+                <div class="emoji">♟️</div>
+                <span>Chess Master</span>
+            </a>
+
+            <!-- Placeholders 4-10 -->
+            <a href="tzfe.html" class="game-card" style="background: linear-gradient(135deg, #ff4655, #bd3944); color: white; animation-delay: 0.4s">
+                <div class="emoji">🔫</div>
+                <span>Elite Survival</span>
+            </a>
+            <a href="#" class="game-card card-placeholder" style="animation-delay: 0.5s">
+                <i class="fas fa-car"></i><span>Coming Soon</span>
+            </a>
+            <a href="#" class="game-card card-placeholder"><i class="fas fa-ghost"></i><span>Coming Soon</span></a>
+            <a href="#" class="game-card card-placeholder"><i class="fas fa-rocket"></i><span>Coming Soon</span></a>
+            <a href="#" class="game-card card-placeholder"><i class="fas fa-basketball-ball"></i><span>Coming Soon</span></a>
+            <a href="#" class="game-card card-placeholder"><i class="fas fa-bolt"></i><span>Coming Soon</span></a>
+            <a href="#" class="game-card card-placeholder"><i class="fas fa-chess-knight"></i><span>Coming Soon</span></a>
+        </div>
+    </div>
+</body>
+</html>

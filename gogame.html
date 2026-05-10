@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yi - Go Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+    --bg: #F5F0E8;
+    --fg: #2C1810;
+    --muted: #8B7355;
+    --accent: #8B4513;
+    --card: rgba(253,248,240,0.92);
+    --border: #D4C5A9;
+    --board-light: #DEB887;
+    --board-dark: #C9985E;
+    --gold: #B8860B;
+    --shadow: rgba(44,24,16,0.12);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{
+    font-family:'Noto Sans SC',sans-serif;
+    background:var(--bg);
+    color:var(--fg);
+    min-height:100vh;
+    overflow-x:hidden;
+    background-image:
+        radial-gradient(ellipse at 15% 30%,rgba(210,195,170,0.35) 0%,transparent 55%),
+        radial-gradient(ellipse at 85% 70%,rgba(200,185,160,0.25) 0%,transparent 50%),
+        radial-gradient(ellipse at 50% 90%,rgba(190,175,150,0.2) 0%,transparent 40%);
+}
+body::before{
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    opacity:0.5;
+}
+header{
+    position:relative;z-index:1;
+    text-align:center;padding:1.5rem 1rem 0.8rem;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,rgba(253,248,240,0.8),transparent);
+}
+header h1{
+    font-family:'Ma Shan Zheng',cursive;
+    font-size:3.2rem;letter-spacing:0.15em;
+    color:var(--accent);
+    text-shadow:1px 1px 2px rgba(139,69,19,0.15);
+    line-height:1;
+}
+header p{
+    font-family:'Noto Serif SC',serif;
+    font-size:0.85rem;color:var(--muted);
+    letter-spacing:0.3em;margin-top:0.2rem;
+}
+main{
+    position:relative;z-index:1;
+    display:flex;gap:1.8rem;
+    max-width:1160px;margin:1.5rem auto;padding:0 1.2rem;
+    align-items:flex-start;
+}
+.board-section{flex-shrink:0;position:relative}
+.board-wrap{
+    position:relative;
+    border-radius:8px;overflow:hidden;
+    box-shadow:0 6px 30px rgba(44,24,16,0.18),0 2px 8px rgba(44,24,16,0.1);
+    border:3px solid #A0784C;
+}
+#boardCanvas{display:block;cursor:pointer;touch-action:none;}
+.board-label{
+    text-align:center;margin-top:0.6rem;
+    font-family:'Noto Serif SC',serif;
+    font-size:0.8rem;color:var(--muted);letter-spacing:0.1em;
+}
+.thinking-overlay{
+    position:absolute;top:0;left:0;right:0;
+    background:linear-gradient(90deg,transparent,rgba(253,248,240,0.92) 20%,rgba(253,248,240,0.92) 80%,transparent);
+    padding:12px 0;text-align:center;
+    font-family:'Noto Serif SC',serif;font-size:0.82rem;
+    color:var(--accent);letter-spacing:0.15em;
+    opacity:0;transition:opacity 0.3s;pointer-events:none;
+}
+.thinking-overlay.show{opacity:1}
+.thinking-overlay .dots::after{
+    content:'';animation:dots 1.2s steps(4,end) infinite;
+}
+@keyframes dots{
+    0%{content:''}25%{content:'·'}50%{content:'··'}75%{content:'···'}
+}
+.side-panel{
+    flex:1;min-width:270px;max-width:320px;
+    display:flex;flex-direction:column;gap:1rem;
+}
+.panel-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;padding:1rem 1.1rem;
+    box-shadow:0 2px 10px var(--shadow);
+    backdrop-filter:blur(6px);
+}
+.panel-card h3{
+    font-family:'Noto Serif SC',serif;
+    font-size:0.85rem;color:var(--accent);
+    margin-bottom:0.7rem;letter-spacing:0.08em;
+    border-bottom:1px solid var(--border);padding-bottom:0.4rem;
+}
+.diff-buttons{display:flex;gap:0.5rem}
+.diff-btn{
+    flex:1;padding:0.55rem 0.3rem;
+    border:2px solid var(--border);border-radius:8px;
+    background:transparent;cursor:pointer;
+    font-family:'Noto Sans SC',sans-serif;font-size:0.78rem;
+    color:var(--muted);transition:all 0.25s;
+    display:flex;flex-direction:column;align-items:center;gap:0.25rem;
+}
+.diff-btn i{font-size:1.1rem}
+.diff-btn:hover{border-color:var(--accent);color:var(--accent)}
+.diff-btn.active{
+    border-color:var(--accent);background:rgba(139,69,19,0.08);
+    color:var(--accent);font-weight:700;
+}
+.size-buttons{display:flex;gap:0.5rem;margin-top:0.5rem}
+.size-btn{
+    flex:1;padding:0.4rem;border:1.5px solid var(--border);border-radius:6px;
+    background:transparent;cursor:pointer;
+    font-family:'Noto Sans SC',sans-serif;font-size:0.78rem;
+    color:var(--muted);transition:all 0.25s;
+}
+.size-btn:hover{border-color:var(--accent);color:var(--accent)}
+.size-btn.active{border-color:var(--accent);background:rgba(139,69,19,0.08);color:var(--accent);font-weight:700}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;font-size:0.8rem}
+.info-item{display:flex;justify-content:space-between;padding:0.25rem 0.4rem;border-radius:4px;background:rgba(139,69,19,0.04)}
+.info-item .label{color:var(--muted)}
+.info-item .value{font-weight:700;color:var(--fg)}
+.turn-indicator{
+    text-align:center;padding:0.5rem;border-radius:6px;
+    font-family:'Noto Serif SC',serif;font-size:0.9rem;
+    margin-bottom:0.5rem;letter-spacing:0.1em;
+    transition:all 0.3s;
+}
+.turn-indicator.black-turn{background:rgba(30,30,30,0.08);color:#1a1a1a}
+.turn-indicator.white-turn{background:rgba(200,200,200,0.3);color:#555}
+.stone-icon{
+    display:inline-block;width:14px;height:14px;border-radius:50%;
+    vertical-align:middle;margin-right:6px;position:relative;top:-1px;
+}
+.stone-icon.black{background:radial-gradient(circle at 35% 35%,#555,#111);box-shadow:1px 1px 2px rgba(0,0,0,0.3)}
+.stone-icon.white{background:radial-gradient(circle at 35% 35%,#fff,#ccc);box-shadow:1px 1px 2px rgba(0,0,0,0.15)}
+.ai-msg{
+    font-size:0.82rem;line-height:1.6;color:var(--fg);
+    min-height:3rem;padding:0.5rem;
+    background:rgba(139,69,19,0.04);border-radius:6px;
+    font-family:'Noto Serif SC',serif;
+    transition:opacity 0.3s;
+}
+.ai-msg .intent-tag{
+    display:inline-block;padding:1px 8px;border-radius:10px;
+    background:var(--accent);color:#fff;font-size:0.72rem;
+    margin-right:4px;vertical-align:middle;
+}
+.score-bar-wrap{margin-top:0.3rem}
+.score-bar{
+    height:22px;border-radius:11px;overflow:hidden;
+    display:flex;background:#eee;position:relative;
+    box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);
+}
+.score-bar .black-bar{
+    background:linear-gradient(90deg,#1a1a1a,#333);
+    transition:width 0.5s ease;display:flex;align-items:center;
+    justify-content:center;color:#fff;font-size:0.65rem;font-weight:700;
+    min-width:30px;
+}
+.score-bar .white-bar{
+    background:linear-gradient(90deg,#ddd,#f5f5f5);
+    transition:width 0.5s ease;display:flex;align-items:center;
+    justify-content:center;color:#555;font-size:0.65rem;font-weight:700;
+    min-width:30px;flex:1;
+}
+.score-label{display:flex;justify-content:space-between;font-size:0.7rem;color:var(--muted);margin-top:0.3rem}
+.options{display:flex;gap:0.8rem;flex-wrap:wrap}
+.opt-label{
+    display:flex;align-items:center;gap:0.35rem;
+    font-size:0.78rem;color:var(--muted);cursor:pointer;
+}
+.opt-label input{accent-color:var(--accent)}
+.action-buttons{display:flex;gap:0.5rem;flex-wrap:wrap}
+.act-btn{
+    flex:1;min-width:70px;padding:0.5rem 0.3rem;
+    border:1.5px solid var(--border);border-radius:8px;
+    background:transparent;cursor:pointer;
+    font-family:'Noto Sans SC',sans-serif;font-size:0.78rem;
+    color:var(--muted);transition:all 0.25s;
+}
+.act-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(139,69,19,0.05)}
+.act-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.act-btn.primary:hover{background:#6B3410}
+.act-btn:disabled{opacity:0.4;cursor:not-allowed}
+/* 模态框 */
+.modal{
+    position:fixed;inset:0;z-index:100;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(44,24,16,0.5);backdrop-filter:blur(4px);
+    opacity:0;pointer-events:none;transition:opacity 0.3s;
+}
+.modal.show{opacity:1;pointer-events:auto}
+.modal-content{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:14px;padding:1.5rem;max-width:560px;width:90%;
+    box-shadow:0 12px 50px rgba(44,24,16,0.3);
+    max-height:90vh;overflow-y:auto;
+}
+.modal-content h2{
+    font-family:'Ma Shan Zheng',cursive;font-size:1.8rem;
+    color:var(--accent);text-align:center;margin-bottom:1rem;
+}
+.replay-board-wrap{
+    display:flex;justify-content:center;margin-bottom:1rem;
+}
+#replayCanvas{border-radius:6px;border:2px solid #A0784C}
+.replay-controls{
+    display:flex;align-items:center;justify-content:center;gap:0.8rem;
+    margin-bottom:0.8rem;
+}
+.replay-controls button{
+    width:36px;height:36px;border-radius:50%;
+    border:1.5px solid var(--border);background:transparent;
+    cursor:pointer;font-size:0.9rem;color:var(--muted);
+    transition:all 0.2s;display:flex;align-items:center;justify-content:center;
+}
+.replay-controls button:hover{border-color:var(--accent);color:var(--accent)}
+.replay-move-info{font-size:0.82rem;color:var(--muted);min-width:80px;text-align:center}
+.replay-comment{
+    font-family:'Noto Serif SC',serif;font-size:0.82rem;
+    line-height:1.7;color:var(--fg);padding:0.6rem;
+    background:rgba(139,69,19,0.04);border-radius:6px;
+    min-height:3rem;margin-bottom:1rem;
+}
+.modal-close{
+    display:block;margin:0 auto;padding:0.5rem 2rem;
+    border:1.5px solid var(--accent);border-radius:8px;
+    background:transparent;cursor:pointer;
+    font-family:'Noto Sans SC',sans-serif;font-size:0.85rem;
+    color:var(--accent);transition:all 0.25s;
+}
+.modal-close:hover{background:var(--accent);color:#fff}
+/* Toast */
+.toast{
+    position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-20px);
+    background:var(--accent);color:#fff;padding:0.6rem 1.5rem;
+    border-radius:8px;font-size:0.82rem;z-index:200;
+    opacity:0;transition:all 0.3s;pointer-events:none;
+    box-shadow:0 4px 15px rgba(139,69,19,0.3);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* 游戏结束覆盖 */
+.game-result{
+    text-align:center;padding:1rem 0;
+}
+.game-result .winner{
+    font-family:'Ma Shan Zheng',cursive;
+    font-size:2rem;color:var(--accent);
+}
+.game-result .score-detail{
+    font-size:0.85rem;color:var(--muted);margin-top:0.3rem;
+}
+/* 动画 */
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.panel-card{animation:fadeIn 0.5s ease both}
+.panel-card:nth-child(2){animation-delay:0.05s}
+.panel-card:nth-child(3){animation-delay:0.1s}
+.panel-card:nth-child(4){animation-delay:0.15s}
+.panel-card:nth-child(5){animation-delay:0.2s}
+.panel-card:nth-child(6){animation-delay:0.25s}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.thinking-pulse{animation:pulse 1.2s ease infinite}
+@keyframes stoneDrop{0%{transform:scale(1.3) translateY(-10px);opacity:0} 70%{transform:scale(0.95)} 100%{transform:scale(1) translateY(0);opacity:1}}
+/* 响应式 */
+@media(max-width:800px){
+    main{flex-direction:column;align-items:center}
+    .side-panel{max-width:100%;min-width:auto;width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}
+}
+</style>
+</head>
+<body>
+<header>
+    <h1>Yi</h1>
+    <p>AI GO GAME</p>
+</header>
+<main>
+    <section class="board-section">
+        <div class="board-wrap">
+            <canvas id="boardCanvas"></canvas>
+            <div class="thinking-overlay" id="thinkingOverlay">
+                <span class="thinking-pulse">AI IS THINKING</span><span class="dots"></span>
+            </div>
+        </div>
+        <div class="board-label" id="boardLabel">9x9 Board · Black to Move</div>
+    </section>
+    <aside class="side-panel">
+        <div class="panel-card">
+            <h3><i class="fas fa-chess"></i> Difficulty Level</h3>
+            <div class="diff-buttons">
+                <button class="diff-btn" data-level="beginner"><i class="fas fa-seedling"></i><span>Beginner</span></button>
+                <button class="diff-btn active" data-level="intermediate"><i class="fas fa-fire"></i><span>Intermediate</span></button>
+                <button class="diff-btn" data-level="advanced"><i class="fas fa-crown"></i><span>Advanced</span></button>
+            </div>
+            <div class="size-buttons">
+                <button class="size-btn active" data-size="9">9x9 Board</button>
+                <button class="size-btn" data-size="13">13x13 Board</button>
+            </div>
+        </div>
+        <div class="panel-card">
+            <h3><i class="fas fa-info-circle"></i> Game Information</h3>
+            <div class="turn-indicator black-turn" id="turnIndicator">
+                <span class="stone-icon black"></span>Black's Turn
+            </div>
+            <div class="info-grid">
+                <div class="info-item"><span class="label">Moves</span><span class="value" id="moveCount">0</span></div>
+                <div class="info-item"><span class="label">Komi</span><span class="value" id="komiDisplay">5.5</span></div>
+                <div class="info-item"><span class="label">B. Cap</span><span class="value" id="blackCaptures">0</span></div>
+                <div class="info-item"><span class="label">W. Cap</span><span class="value" id="whiteCaptures">0</span></div>
+            </div>
+        </div>
+        <div class="panel-card">
+            <h3><i class="fas fa-comment-dots"></i> AI Commentary</h3>
+            <div class="ai-msg" id="aiMessage">Select difficulty and click the board to start.</div>
+        </div>
+        <div class="panel-card">
+            <h3><i class="fas fa-chart-pie"></i> Score Estimator</h3>
+            <div class="score-bar-wrap">
+                <div class="score-bar">
+                    <div class="black-bar" id="blackBar" style="width:50%">0</div>
+                    <div class="white-bar" id="whiteBar" style="width:50%">0</div>
+                </div>
+                <div class="score-label">
+                    <span>Black <strong id="blackScore">0</strong></span>
+                    <span><strong id="whiteScore">0</strong> White</span>
+                </div>
+            </div>
+            <div class="options" style="margin-top:0.6rem">
+                <label class="opt-label"><input type="checkbox" id="showTerritory"> Territory</label>
+                <label class="opt-label"><input type="checkbox" id="showHeatmap"> Heatmap</label>
+            </div>
+        </div>
+        <div class="panel-card">
+            <div class="action-buttons">
+                <button class="act-btn" id="passBtn">Pass</button>
+                <button class="act-btn" id="undoBtn">Undo</button>
+                <button class="act-btn primary" id="newGameBtn">New Game</button>
+            </div>
+        </div>
+    </aside>
+</main>
+
+<!-- 复盘模态框 -->
+<div class="modal" id="replayModal">
+    <div class="modal-content">
+        <h2>AI Review</h2>
+        <div class="game-result" id="gameResult"></div>
+        <div class="replay-board-wrap"><canvas id="replayCanvas"></canvas></div>
+        <div class="replay-controls">
+            <button id="rpFirst" title="Start"><i class="fas fa-backward-fast"></i></button>
+            <button id="rpPrev" title="Previous"><i class="fas fa-backward-step"></i></button>
+            <span class="replay-move-info" id="rpMoveInfo">Beginning</span>
+            <button id="rpNext" title="Next"><i class="fas fa-forward-step"></i></button>
+            <button id="rpLast" title="End"><i class="fas fa-forward-fast"></i></button>
+        </div>
+        <div class="replay-comment" id="rpComment">The game has not started yet.</div>
+        <button class="modal-close" id="rpClose">Close</button>
+    </div>
+</div>
+
+<script>
+/* ===== 围棋核心逻辑 ===== */
+class GoGame {
+    constructor(size = 9) {
+        this.size = size;
+        this.board = [];
+        this.currentPlayer = 1; // 1=黑, 2=白
+        this.captures = [0, 0, 0]; // captures[1]=黑提子数, captures[2]=白提子数
+        this.koPoint = null;
+        this.history = [];
+        this.snapshots = [];
+        this.moveCount = 0;
+        this.consecutivePasses = 0;
+        this.gameOver = false;
+        this.init();
+    }
+
+    init() {
+        this.board = Array.from({ length: this.size }, () => Array(this.size).fill(0));
+        this.snapshots = [this.board.map(r => [...r])];
+    }
+
+    clone() {
+        const g = Object.create(GoGame.prototype);
+        g.size = this.size;
+        g.board = this.board.map(r => r.slice());
+        g.currentPlayer = this.currentPlayer;
+        g.captures = this.captures.slice();
+        g.koPoint = this.koPoint ? this.koPoint.slice() : null;
+        g.moveCount = this.moveCount;
+        g.consecutivePasses = this.consecutivePasses;
+        g.gameOver = this.gameOver;
+        g.history = [];
+        g.snapshots = [];
+        return g;
+    }
+
+    getNeighbors(x, y) {
+        const n = [];
+        if (x > 0) n.push([x - 1, y]);
+        if (x < this.size - 1) n.push([x + 1, y]);
+        if (y > 0) n.push([x, y - 1]);
+        if (y < this.size - 1) n.push([x, y + 1]);
+        return n;
+    }
+
+    getGroup(x, y, bs) {
+        const boardState = bs || this.board;
+        const color = boardState[y][x];
+        if (color === 0) return { stones: [], liberties: 0 };
+        const visited = new Set();
+        const stones = [];
+        const liberties = new Set();
+        const stack = [[x, y]];
+        while (stack.length > 0) {
+            const [cx, cy] = stack.pop();
+            const key = cy * this.size + cx;
+            if (visited.has(key)) continue;
+            visited.add(key);
+            stones.push([cx, cy]);
+            for (const [nx, ny] of this.getNeighbors(cx, cy)) {
+                const nk = ny * this.size + nx;
+                if (boardState[ny][nx] === 0) {
+                    liberties.add(nk);
+                } else if (boardState[ny][nx] === color && !visited.has(nk)) {
+                    stack.push([nx, ny]);
+                }
+            }
+        }
+        return { stones, liberties: liberties.size };
+    }
+
+    wouldCapture(x, y, player) {
+        const bs = this.board.map(r => r.slice());
+        bs[y][x] = player;
+        const opp = player === 1 ? 2 : 1;
+        const captured = [];
+        const checked = new Set();
+        for (const [nx, ny] of this.getNeighbors(x, y)) {
+            if (bs[ny][nx] === opp && !checked.has(ny * this.size + nx)) {
+                const group = this.getGroup(nx, ny, bs);
+                if (group.liberties === 0) {
+                    for (const [sx, sy] of group.stones) {
+                        captured.push([sx, sy]);
+                        checked.add(sy * this.size + sx);
+                    }
+                }
+            }
+        }
+        return captured;
+    }
+
+    isLegalMove(x, y, player) {
+        const p = player || this.currentPlayer;
+        if (x < 0 || x >= this.size || y < 0 || y >= this.size) return false;
+        if (this.board[y][x] !== 0) return false;
+        if (this.koPoint && this.koPoint[0] === x && this.koPoint[1] === y) return false;
+        const captured = this.wouldCapture(x, y, p);
+        if (captured.length === 0) {
+            const bs = this.board.map(r => r.slice());
+            bs[y][x] = p;
+            const selfGroup = this.getGroup(x, y, bs);
+            if (selfGroup.liberties === 0) return false;
+        }
+        return true;
+    }
+
+    playMove(x, y) {
+        if (!this.isLegalMove(x, y)) return null;
+        const player = this.currentPlayer;
+        const opp = player === 1 ? 2 : 1;
+        this.board[y][x] = player;
+        let actualCaptured = [];
+        for (const [nx, ny] of this.getNeighbors(x, y)) {
+            if (this.board[ny][nx] === opp) {
+                const group = this.getGroup(nx, ny);
+                if (group.liberties === 0) {
+                    for (const [cx, cy] of group.stones) {
+                        this.board[cy][cx] = 0;
+                        actualCaptured.push([cx, cy]);
+                    }
+                }
+            }
+        }
+        this.captures[player] += actualCaptured.length;
+        // 打劫检测
+        this.koPoint = null;
+        if (actualCaptured.length === 1) {
+            const selfGroup = this.getGroup(x, y);
+            if (selfGroup.stones.length === 1 && selfGroup.liberties === 1) {
+                this.koPoint = [actualCaptured[0][0], actualCaptured[0][1]];
+            }
+        }
+        this.consecutivePasses = 0;
+        this.moveCount++;
+        const move = { x, y, player, captured: actualCaptured, moveNumber: this.moveCount };
+        this.history.push(move);
+        this.snapshots.push(this.board.map(r => [...r]));
+        this.currentPlayer = opp;
+        return move;
+    }
+
+    pass() {
+        this.consecutivePasses++;
+        this.moveCount++;
+        const move = { x: -1, y: -1, player: this.currentPlayer, captured: [], moveNumber: this.moveCount };
+        this.history.push(move);
+        this.snapshots.push(this.board.map(r => [...r]));
+        this.koPoint = null;
+        this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
+        if (this.consecutivePasses >= 2) this.gameOver = true;
+        return move;
+    }
+
+    getLegalMoves() {
+        const moves = [];
+        for (let y = 0; y < this.size; y++)
+            for (let x = 0; x < this.size; x++)
+                if (this.isLegalMove(x, y)) moves.push([x, y]);
+        return moves;
+    }
+
+    // 中国规则计分
+    calculateScore() {
+        const territory = Array.from({ length: this.size }, () => Array(this.size).fill(0));
+        const visited = Array.from({ length: this.size }, () => Array(this.size).fill(false));
+        let bTerr = 0, wTerr = 0, bStones = 0, wStones = 0;
+        for (let y = 0; y < this.size; y++)
+            for (let x = 0; x < this.size; x++)
+                if (this.board[y][x] === 1) bStones++;
+                else if (this.board[y][x] === 2) wStones++;
+        for (let y = 0; y < this.size; y++) {
+            for (let x = 0; x < this.size; x++) {
+                if (this.board[y][x] === 0 && !visited[y][x]) {
+                    const region = [];
+                    const stack = [[x, y]];
+                    let touchB = false, touchW = false;
+                    while (stack.length > 0) {
+                        const [cx, cy] = stack.pop();
+                        if (cx < 0 || cx >= this.size || cy < 0 || cy >= this.size) continue;
+                        if (visited[cy][cx]) continue;
+                        if (this.board[cy][cx] !== 0) {
+                            if (this.board[cy][cx] === 1) touchB = true;
+                            else touchW = true;
+                            continue;
+                        }
+                        visited[cy][cx] = true;
+                        region.push([cx, cy]);
+                        for (const [nx, ny] of this.getNeighbors(cx, cy)) stack.push([nx, ny]);
+                    }
+                    if (touchB && !touchW) { bTerr += region.length; for (const [rx, ry] of region) territory[ry][rx] = 1; }
+                    else if (touchW && !touchB) { wTerr += region.length; for (const [rx, ry] of region) territory[ry][rx] = 2; }
+                }
+            }
+        }
+        const komi = this.size <= 9 ? 5.5 : 6.5;
+        return {
+            blackScore: bStones + bTerr,
+            whiteScore: wStones + wTerr + komi,
+            komi, territory, bTerr, wTerr, bStones, wStones
+        };
+    }
+
+    // 影响力计算（用于热力图）
+    calculateInfluence() {
+        const s = this.size;
+        const inf = Array.from({ length: s }, () => Array(s).fill(0));
+        const range = 5;
+        for (let y = 0; y < s; y++) {
+            for (let x = 0; x < s; x++) {
+                if (this.board[y][x] !== 0) {
+                    const sign = this.board[y][x] === 1 ? 1 : -1;
+                    for (let dy = -range; dy <= range; dy++) {
+                        for (let dx = -range; dx <= range; dx++) {
+                            const nx = x + dx, ny = y + dy;
+                            if (nx >= 0 && nx < s && ny >= 0 && ny < s) {
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                if (dist <= range) {
+                                    inf[ny][nx] += sign * (1 - dist / (range + 1));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return inf;
+    }
+}
+
+/* ===== AI ===== */
+class GoAI {
+    constructor(difficulty, game) {
+        this.difficulty = difficulty;
+        this.game = game;
+    }
+
+    getMove() {
+        const moves = this.game.getLegalMoves();
+        if (moves.length === 0) return null;
+        switch (this.difficulty) {
+            case 'beginner': return this.beginnerMove(moves);
+            case 'intermediate': return this.intermediateMove(moves);
+            case 'advanced': return this.advancedMove(moves);
+            default: return this.intermediateMove(moves);
+        }
+    }
+
+    // 初段：随机+简单启发式
+    beginnerMove(moves) {
+        const s = this.game.size;
+        const scored = moves.map(([x, y]) => {
+            let score = Math.random() * 8;
+            const cd = Math.min(x, s - 1 - x) + Math.min(y, s - 1 - y);
+            if (cd <= 2) score += 4;
+            else if (cd <= 4) score += 2;
+            if (x === 0 || x === s - 1 || y === 0 || y === s - 1) score -= 3;
+            const cap = this.game.wouldCapture(x, y, this.game.currentPlayer);
+            score += cap.length * 8;
+            return { x, y, score };
+        });
+        scored.sort((a, b) => b.score - a.score);
+        const top = Math.min(5, scored.length);
+        const pick = scored[Math.floor(Math.random() * top)];
+        return { x: pick.x, y: pick.y, intent: this.getIntentTranslation(this.getIntent(pick.x, pick.y)) };
+    }
+
+    // Intermediate: Evaluation function
+    intermediateMove(moves) {
+        const s = this.game.size;
+        const player = this.game.currentPlayer;
+        const opp = player === 1 ? 2 : 1;
+        const scored = moves.map(([x, y]) => {
+            let score = 0;
+            // 提子
+            const cap = this.game.wouldCapture(x, y, player);
+            score += cap.length * 12;
+            // 叫吃
+            const bs = this.game.board.map(r => r.slice());
+            bs[y][x] = player;
+            for (const [cx, cy] of cap) bs[cy][cx] = 0;
+            for (const [nx, ny] of this.game.getNeighbors(x, y)) {
+                if (bs[ny][nx] === opp) {
+                    const g = this.game.getGroup(nx, ny, bs);
+                    if (g.liberties === 1) score += 6;
+                    else if (g.liberties === 2) score += 2;
+                }
+            }
+            // 位置评估
+            const cd = Math.min(x, s - 1 - x) + Math.min(y, s - 1 - y);
+            const starPts = this.getStarPoints();
+            if (starPts.some(([sx, sy]) => sx === x && sy === y) && this.game.board[y][x] === 0) score += 5;
+            if ((x === 2 || x === s - 3) && (y === 2 || y === s - 3)) score += 3;
+            if (x === 0 || x === s - 1 || y === 0 || y === s - 1) score -= 4;
+            if (cd <= 2) score += 3;
+            // 邻近己方棋子（连接）
+            let nearFriend = 0, nearOpp = 0;
+            for (const [nx, ny] of this.game.getNeighbors(x, y)) {
+                if (this.game.board[ny][nx] === player) nearFriend++;
+                if (this.game.board[ny][nx] === opp) nearOpp++;
+            }
+            score += nearFriend * 1.5;
+            score += nearOpp * 0.8;
+            // 自身气数
+            const selfGroup = this.game.getGroup(x, y, bs);
+            score += Math.min(selfGroup.liberties, 4) * 1;
+            score += Math.random() * 3;
+            return { x, y, score };
+        });
+        scored.sort((a, b) => b.score - a.score);
+        const top = Math.min(3, scored.length);
+        const pick = scored[Math.floor(Math.random() * top)];
+        return { x: pick.x, y: pick.y, intent: this.getIntentTranslation(this.getIntent(pick.x, pick.y)) };
+    }
+
+    // Advanced: Monte Carlo
+    advancedMove(moves) {
+        const candidates = this.getCandidates(moves, 20);
+        if (candidates.length === 0) return null;
+        const player = this.game.currentPlayer;
+        const simsPerCandidate = Math.max(3, Math.floor(150 / candidates.length));
+        let bestMove = candidates[0];
+        let bestWins = -1;
+        for (const [x, y] of candidates) {
+            let wins = 0;
+            for (let s = 0; s < simsPerCandidate; s++) {
+                const sim = this.game.clone();
+                if (!sim.playMove(x, y)) continue;
+                let passes = 0, maxSteps = 80;
+                while (passes < 2 && maxSteps-- > 0) {
+                    const legal = sim.getLegalMoves();
+                    if (legal.length === 0) { sim.pass(); passes++; continue; }
+                    // 简单启发式随机
+                    const pick = legal[Math.floor(Math.random() * legal.length)];
+                    sim.playMove(pick[0], pick[1]);
+                    passes = 0;
+                }
+                const sc = sim.calculateScore();
+                if (player === 1 && sc.blackScore > sc.whiteScore) wins++;
+                if (player === 2 && sc.whiteScore > sc.blackScore) wins++;
+            }
+            if (wins > bestWins) { bestWins = wins; bestMove = [x, y]; }
+        }
+        return { x: bestMove[0], y: bestMove[1], intent: this.getIntentTranslation(this.getIntent(bestMove[0], bestMove[1])) };
+    }
+
+    getCandidates(moves, maxCount) {
+        const player = this.game.currentPlayer;
+        const scored = moves.map(([x, y]) => {
+            let score = 0;
+            const cap = this.game.wouldCapture(x, y, player);
+            score += cap.length * 15;
+            for (const [nx, ny] of this.game.getNeighbors(x, y)) {
+                if (this.game.board[ny][nx] !== 0) score += 3;
+            }
+            const s = this.game.size;
+            if (x === 0 || x === s - 1 || y === 0 || y === s - 1) score -= 5;
+            const cd = Math.min(x, s - 1 - x) + Math.min(y, s - 1 - y);
+            if (cd <= 2) score += 4;
+            return { x, y, score };
+        });
+        scored.sort((a, b) => b.score - a.score);
+        return scored.slice(0, maxCount).map(s => [s.x, s.y]);
+    }
+
+    getStarPoints() {
+        const s = this.game.size;
+        if (s === 9) return [[2, 2], [2, 6], [6, 2], [6, 6], [4, 4]];
+        if (s === 13) return [[3, 3], [3, 9], [9, 3], [9, 9], [6, 6], [3, 6], [6, 3], [6, 9], [9, 6]];
+        return [];
+    }
+
+    getIntentTranslation(intent) {
+        const dict = {
+            '提子': 'Capture', '拔子': 'Atari', '守角': 'Corner Defense',
+            '挂角': 'Corner Approach', '占角': 'Corner Enclosure',
+            '打入': 'Invasion', '攻逼': 'Attack', '逼住': 'Pressure',
+            '拆边': 'Side Extension', '布局': 'Fuseki', '连接': 'Connection',
+            '治孤': 'Settling', '扩展': 'Extension'
+        };
+        return dict[intent] || intent;
+    }
+
+    getIntent(x, y) {
+        const s = this.game.size;
+        const player = this.game.currentPlayer;
+        const opp = player === 1 ? 2 : 1;
+        const cd = Math.min(x, s - 1 - x) + Math.min(y, s - 1 - y);
+        const cap = this.game.wouldCapture(x, y, player);
+        if (cap.length >= 2) return '提子';
+        if (cap.length === 1) return '拔子';
+        let nearF = 0, nearO = 0;
+        for (const [nx, ny] of this.game.getNeighbors(x, y)) {
+            if (this.game.board[ny][nx] === player) nearF++;
+            if (this.game.board[ny][nx] === opp) nearO++;
+        }
+        // 角部
+        if (cd <= 2) {
+            if (nearF > 0 && nearO === 0) return '守角';
+            if (nearO > 0 && nearF === 0) return '挂角';
+            return '占角';
+        }
+        // 检查是否在对方势力范围
+        let oppInfluence = 0;
+        for (let dy = -3; dy <= 3; dy++) {
+            for (let dx = -3; dx <= 3; dx++) {
+                const nx = x + dx, ny = y + dy;
+                if (nx >= 0 && nx < s && ny >= 0 && ny < s && this.game.board[ny][nx] === opp) oppInfluence++;
+            }
+        }
+        if (oppInfluence >= 3 && nearF === 0) return '打入';
+        if (nearO >= 1 && nearF === 0) {
+            // 检查是否在攻击对方弱组
+            for (const [nx, ny] of this.game.getNeighbors(x, y)) {
+                if (this.game.board[ny][nx] === opp) {
+                    const g = this.game.getGroup(nx, ny);
+                    if (g.liberties <= 2) return '攻逼';
+                }
+            }
+            return '逼住';
+        }
+        // 边
+        if (cd <= 4) {
+            if (nearF > 0) return '拆边';
+            return '布局';
+        }
+        // 中央
+        if (nearF >= 2) return '连接';
+        if (nearF === 1) {
+            for (const [nx, ny] of this.game.getNeighbors(x, y)) {
+                if (this.game.board[ny][nx] === player) {
+                    const g = this.game.getGroup(nx, ny);
+                    if (g.liberties <= 2) return '治孤';
+                }
+            }
+            return '扩展';
+        }
+        return '布局';
+    }
+}
+
+/* ===== Sound Effects ===== */
+let audioCtx = null;
+function playStoneSound() {
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+        const osc1 = audioCtx.createOscillator();
+        const g1 = audioCtx.createGain();
+        osc1.connect(g1); g1.connect(audioCtx.destination);
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(1400 + Math.random() * 300, now);
+        osc1.frequency.exponentialRampToValueAtTime(500, now + 0.06);
+        g1.gain.setValueAtTime(0.22, now);
+        g1.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc1.start(now); osc1.stop(now + 0.1);
+        const osc2 = audioCtx.createOscillator();
+        const g2 = audioCtx.createGain();
+        osc2.connect(g2); g2.connect(audioCtx.destination);
+        osc2.type = 'sine';
+        osc2.frequency.value = 180 + Math.random() * 40;
+        g2.gain.setValueAtTime(0.1, now);
+        g2.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc2.start(now); osc2.stop(now + 0.18);
+        const osc3 = audioCtx.createOscillator();
+        const g3 = audioCtx.createGain();
+        osc3.connect(g3); g3.connect(audioCtx.destination);
+        osc3.type = 'triangle';
+        osc3.frequency.value = 2800 + Math.random() * 800;
+        g3.gain.setValueAtTime(0.04, now);
+        g3.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        osc3.start(now); osc3.stop(now + 0.04);
+    } catch (e) { }
+}
+
+/* ===== Main App ===== */
+class GoApp {
+    constructor() {
+        this.game = null;
+        this.ai = null;
+        this.difficulty = 'intermediate';
+        this.boardSize = 9;
+        this.canvas = document.getElementById('boardCanvas');
+        this.ctx = null;
+        this.cellSize = 0;
+        this.margin = 0;
+        this.canvasLogicSize = 0;
+        this.isAIThinking = false;
+        this.showTerritory = false;
+        this.showHeatmap = false;
+        this.hoverPos = null;
+        this.lastMove = null;
+        this.woodTexture = null;
+        this.replayIndex = 0;
+        this.keyMoves = [];
+        this.moveIntents = {};
+        this.init();
+    }
+
+    init() {
+        this.setupCanvas();
+        this.newGame();
+        this.bindEvents();
+        this.render();
+    }
+
+    setupCanvas() {
+        const maxW = Math.min(window.innerWidth - 380, 560);
+        const maxH = window.innerHeight - 160;
+        const size = Math.max(320, Math.min(maxW, maxH, 560));
+        this.canvasLogicSize = size;
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = size * dpr;
+        this.canvas.height = size * dpr;
+        this.canvas.style.width = size + 'px';
+        this.canvas.style.height = size + 'px';
+        this.ctx = this.canvas.getContext('2d');
+        this.ctx.scale(dpr, dpr);
+        this.margin = size * 0.06;
+        this.cellSize = (size - 2 * this.margin) / (this.boardSize - 1);
+        this.generateWoodTexture();
+    }
+
+    generateWoodTexture() {
+        const s = this.canvasLogicSize;
+        const offscreen = document.createElement('canvas');
+        offscreen.width = s; offscreen.height = s;
+        const c = offscreen.getContext('2d');
+        const grad = c.createLinearGradient(0, 0, s, s * 0.3);
+        grad.addColorStop(0, '#DEB887');
+        grad.addColorStop(0.3, '#D2A679');
+        grad.addColorStop(0.6, '#C9985E');
+        grad.addColorStop(1, '#DEB887');
+        c.fillStyle = grad;
+        c.fillRect(0, 0, s, s);
+        c.globalAlpha = 0.08;
+        for (let i = 0; i < s; i += 2 + Math.random() * 5) {
+            c.strokeStyle = Math.random() > 0.5 ? '#8B6914' : '#A0784C';
+            c.lineWidth = 0.5 + Math.random() * 1;
+            c.beginPath();
+            let cx = 0, cy = i;
+            c.moveTo(cx, cy);
+            while (cx < s) {
+                cx += 8 + Math.random() * 25;
+                cy = i + (Math.random() - 0.5) * 4;
+                c.lineTo(cx, cy);
+            }
+            c.stroke();
+        }
+        c.globalAlpha = 0.04;
+        for (let k = 0; k < 3; k++) {
+            const kx = Math.random() * s, ky = Math.random() * s;
+            const kr = 15 + Math.random() * 30;
+            const kg = c.createRadialGradient(kx, ky, 0, kx, ky, kr);
+            kg.addColorStop(0, '#8B6914');
+            kg.addColorStop(1, 'transparent');
+            c.fillStyle = kg;
+            c.fillRect(kx - kr, ky - kr, kr * 2, kr * 2);
+        }
+        c.globalAlpha = 1;
+        this.woodTexture = offscreen;
+    }
+
+    newGame() {
+        this.game = new GoGame(this.boardSize);
+        this.ai = new GoAI(this.difficulty, this.game);
+        this.isAIThinking = false;
+        this.lastMove = null;
+        this.hoverPos = null;
+        this.keyMoves = [];
+        this.moveIntents = {};
+        this.setupCanvas();
+        this.render();
+        this.updateUI();
+        this.setAIMessage('Select difficulty and click the board to start.');
+        document.getElementById('thinkingOverlay').classList.remove('show');
+    }
+
+    bindEvents() {
+        this.canvas.addEventListener('click', (e) => this.handleBoardClick(e));
+        this.canvas.addEventListener('mousemove', (e) => this.handleBoardHover(e));
+        this.canvas.addEventListener('mouseleave', () => { this.hoverPos = null; this.render(); });
+
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.difficulty = btn.dataset.level;
+                this.ai.difficulty = this.difficulty;
+            });
+        });
+
+        document.querySelectorAll('.size-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.boardSize = parseInt(btn.dataset.size);
+                this.newGame();
+            });
+        });
+
+        document.getElementById('passBtn').addEventListener('click', () => this.handlePass());
+        document.getElementById('undoBtn').addEventListener('click', () => this.handleUndo());
+        document.getElementById('newGameBtn').addEventListener('click', () => this.newGame());
+
+        // 显示选项
+        document.getElementById('showTerritory').addEventListener('change', (e) => {
+            this.showTerritory = e.target.checked; this.render();
+        });
+        document.getElementById('showHeatmap').addEventListener('change', (e) => {
+            this.showHeatmap = e.target.checked; this.render();
+        });
+
+        // 复盘
+        document.getElementById('rpClose').addEventListener('click', () => this.closeReplay());
+        document.getElementById('rpFirst').addEventListener('click', () => { this.replayIndex = 0; this.renderReplay(); });
+        document.getElementById('rpPrev').addEventListener('click', () => { if (this.replayIndex > 0) { this.replayIndex--; this.renderReplay(); } });
+        document.getElementById('rpNext').addEventListener('click', () => { if (this.replayIndex < this.game.history.length) { this.replayIndex++; this.renderReplay(); } });
+        document.getElementById('rpLast').addEventListener('click', () => { this.replayIndex = this.game.history.length; this.renderReplay(); });
+
+        // 窗口大小改变
+        window.addEventListener('resize', () => { this.setupCanvas(); this.render(); });
+    }
+
+    getBoardCoords(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvasLogicSize / rect.width;
+        const scaleY = this.canvasLogicSize / rect.height;
+        const mx = (e.clientX - rect.left) * scaleX;
+        const my = (e.clientY - rect.top) * scaleY;
+        const bx = Math.round((mx - this.margin) / this.cellSize);
+        const by = Math.round((my - this.margin) / this.cellSize);
+        if (bx >= 0 && bx < this.boardSize && by >= 0 && by < this.boardSize) return [bx, by];
+        return null;
+    }
+
+    handleBoardClick(e) {
+        if (this.isAIThinking || this.game.gameOver) return;
+        if (this.game.currentPlayer !== 1) return; // 人类执黑
+        const coords = this.getBoardCoords(e);
+        if (!coords) return;
+        const [x, y] = coords;
+        const move = this.game.playMove(x, y);
+        if (move) {
+            this.lastMove = move;
+            playStoneSound();
+            this.render();
+            this.updateUI();
+            this.updateScoreDisplay();
+            if (this.game.gameOver) { this.endGame(); return; }
+            this.aiTurn();
+        }
+    }
+
+    handleBoardHover(e) {
+        if (this.isAIThinking || this.game.gameOver || this.game.currentPlayer !== 1) return;
+        const coords = this.getBoardCoords(e);
+        this.hoverPos = coords;
+        this.render();
+    }
+
+    handlePass() {
+        if (this.isAIThinking || this.game.gameOver) return;
+        if (this.game.currentPlayer !== 1) return;
+        this.game.pass();
+        this.setAIMessage('Black passed.');
+        this.updateUI();
+        if (this.game.gameOver) { this.endGame(); return; }
+        this.aiTurn();
+    }
+
+    handleUndo() {
+        if (this.isAIThinking || this.game.history.length < 2) return;
+        for (let i = 0; i < 2 && this.game.history.length > 0; i++) {
+            const move = this.game.history.pop();
+            if (move && move.moveNumber) delete this.moveIntents[move.moveNumber];
+            this.game.snapshots.pop();
+            this.game.moveCount--;
+        }
+        const lastSnap = this.game.snapshots[this.game.snapshots.length - 1];
+        this.game.board = lastSnap.map(r => [...r]);
+        this.game.currentPlayer = 1;
+        this.game.consecutivePasses = 0;
+        this.game.koPoint = null;
+        this.game.gameOver = false;
+        this.game.captures = [0, 0, 0];
+        for (const m of this.game.history) {
+            if (m.captured) this.game.captures[m.player] += m.captured.length;
+        }
+        this.lastMove = this.game.history.length > 0 ? this.game.history[this.game.history.length - 1] : null;
+        this.setAIMessage('Move undone.');
+        this.render();
+        this.updateUI();
+        this.updateScoreDisplay();
+    }
+
+    async aiTurn() {
+        this.isAIThinking = true;
+        document.getElementById('thinkingOverlay').classList.add('show');
+        this.canvas.style.cursor = 'wait';
+
+        const thinkTime = this.difficulty === 'beginner' ? 600 :
+                          this.difficulty === 'intermediate' ? 1000 : 1500;
+        await new Promise(r => setTimeout(r, thinkTime));
+
+        const aiMove = this.ai.getMove();
+        if (aiMove) {
+            const move = this.game.playMove(aiMove.x, aiMove.y);
+            if (move) {
+                this.lastMove = move;
+                this.moveIntents[move.moveNumber] = aiMove.intent;
+                playStoneSound();
+                const intentText = aiMove.intent;
+                this.setAIMessage(`<span class="intent-tag">${intentText}</span> White ${this.coordToStr(aiMove.x, aiMove.y)}`);
+            } else {
+                this.game.pass();
+                this.setAIMessage('White passed.');
+            }
+        } else {
+            this.game.pass();
+            this.setAIMessage('White passed.');
+        }
+
+        this.isAIThinking = false;
+        document.getElementById('thinkingOverlay').classList.remove('show');
+        this.canvas.style.cursor = 'pointer';
+        this.render();
+        this.updateUI();
+        this.updateScoreDisplay();
+        if (this.game.gameOver) this.endGame();
+    }
+
+    coordToStr(x, y) {
+        const letters = 'ABCDEFGHJKLMNOPQRST';
+        return letters[x] + (this.boardSize - y);
+    }
+
+    setAIMessage(html) {
+        document.getElementById('aiMessage').innerHTML = html;
+    }
+
+    updateUI() {
+        document.getElementById('moveCount').textContent = this.game.moveCount;
+        document.getElementById('blackCaptures').textContent = this.game.captures[1];
+        document.getElementById('whiteCaptures').textContent = this.game.captures[2];
+        document.getElementById('komiDisplay').textContent = this.boardSize <= 9 ? '5.5' : '6.5';
+        const ti = document.getElementById('turnIndicator');
+        if (this.game.gameOver) {
+            ti.className = 'turn-indicator';
+            ti.innerHTML = 'Game Over';
+        } else if (this.game.currentPlayer === 1) {
+            ti.className = 'turn-indicator black-turn';
+            ti.innerHTML = '<span class="stone-icon black"></span>Black to Move';
+        } else {
+            ti.className = 'turn-indicator white-turn';
+            ti.innerHTML = '<span class="stone-icon white"></span>AI is Thinking';
+        }
+        document.getElementById('passBtn').disabled = this.isAIThinking || this.game.gameOver;
+        document.getElementById('undoBtn').disabled = this.isAIThinking || this.game.history.length < 2;
+    }
+
+    updateScoreDisplay() {
+        const sc = this.game.calculateScore();
+        const total = sc.blackScore + sc.whiteScore;
+        const bPct = Math.max(5, (sc.blackScore / total) * 100);
+        const wPct = 100 - bPct;
+        document.getElementById('blackBar').style.width = bPct + '%';
+        document.getElementById('blackBar').textContent = sc.blackScore.toFixed(1);
+        document.getElementById('whiteBar').style.width = wPct + '%';
+        document.getElementById('whiteBar').textContent = sc.whiteScore.toFixed(1);
+        document.getElementById('blackScore').textContent = sc.blackScore.toFixed(1);
+        document.getElementById('whiteScore').textContent = sc.whiteScore.toFixed(1);
+    }
+
+    endGame() {
+        const sc = this.game.calculateScore();
+        const winner = sc.blackScore > sc.whiteScore ? 'Black' : 'White';
+        const diff = Math.abs(sc.blackScore - sc.whiteScore).toFixed(1);
+        this.setAIMessage(`Game Over! ${winner} wins by ${diff} points.`);
+        this.identifyKeyMoves();
+        setTimeout(() => this.openReplay(), 800);
+    }
+
+    identifyKeyMoves() {
+        this.keyMoves = [];
+        if (this.game.history.length < 4) return;
+        for (let i = 1; i < this.game.snapshots.length; i++) {
+            const prevBoard = this.game.snapshots[i - 1];
+            const currBoard = this.game.snapshots[i];
+            let captured = 0;
+            for (let y = 0; y < this.boardSize; y++)
+                for (let x = 0; x < this.boardSize; x++)
+                    if (prevBoard[y][x] !== 0 && currBoard[y][x] === 0) captured++;
+            let territoryChange = 0;
+            const prevGame = this.game.clone();
+            prevGame.board = prevBoard.map(r => [...r]);
+            const currGame = this.game.clone();
+            currGame.board = currBoard.map(r => [...r]);
+            const prevScore = prevGame.calculateScore();
+            const currScore = currGame.calculateScore();
+            territoryChange = Math.abs(
+                (currScore.blackScore - currScore.whiteScore) -
+                (prevScore.blackScore - prevScore.whiteScore)
+            );
+            let importance = captured * 3 + territoryChange;
+            if (i <= 4) importance *= 0.5;
+            if (importance > 2) {
+                this.keyMoves.push({ index: i - 1, importance });
+            }
+        }
+        this.keyMoves.sort((a, b) => b.importance - a.importance);
+        this.keyMoves = this.keyMoves.slice(0, 8);
+    }
+
+    openReplay() {
+        this.replayIndex = 0;
+        const sc = this.game.calculateScore();
+        const winner = sc.blackScore > sc.whiteScore ? 'Black' : 'White';
+        const diff = Math.abs(sc.blackScore - sc.whiteScore).toFixed(1);
+        document.getElementById('gameResult').innerHTML =
+            `<div class="winner">${winner} Wins by ${diff} pts</div>
+             <div class="score-detail">Black ${sc.blackScore.toFixed(1)} vs White ${sc.whiteScore.toFixed(1)} (Komi: ${sc.komi})</div>`;
+        this.setupReplayCanvas();
+        this.renderReplay();
+        document.getElementById('replayModal').classList.add('show');
+    }
+
+    closeReplay() {
+        document.getElementById('replayModal').classList.remove('show');
+    }
+
+    setupReplayCanvas() {
+        const rc = document.getElementById('replayCanvas');
+        const size = Math.min(400, window.innerWidth - 80);
+        const dpr = window.devicePixelRatio || 1;
+        rc.width = size * dpr; rc.height = size * dpr;
+        rc.style.width = size + 'px'; rc.style.height = size + 'px';
+        const c = rc.getContext('2d');
+        c.scale(dpr, dpr);
+    }
+
+    renderReplay() {
+        const rc = document.getElementById('replayCanvas');
+        const c = rc.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const size = rc.width / dpr;
+        const margin = size * 0.06;
+        const cellSize = (size - 2 * margin) / (this.boardSize - 1);
+        const bs = this.boardSize;
+
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        c.drawImage(this.woodTexture, 0, 0, size, size);
+        c.strokeStyle = 'rgba(60,30,10,0.6)';
+        c.lineWidth = 0.8;
+        for (let i = 0; i < bs; i++) {
+            c.beginPath();
+            c.moveTo(margin + i * cellSize, margin);
+            c.lineTo(margin + i * cellSize, margin + (bs - 1) * cellSize);
+            c.stroke();
+            c.beginPath();
+            c.moveTo(margin, margin + i * cellSize);
+            c.lineTo(margin + (bs - 1) * cellSize, margin + i * cellSize);
+            c.stroke();
+        }
+        const stars = bs === 9 ? [[2,2],[2,6],[6,2],[6,6],[4,4]] :
+                      bs === 13 ? [[3,3],[3,9],[9,3],[9,9],[6,6],[3,6],[6,3],[6,9],[9,6]] : [];
+        for (const [sx, sy] of stars) {
+            c.beginPath();
+            c.arc(margin + sx * cellSize, margin + sy * cellSize, Math.max(2, cellSize * 0.08), 0, Math.PI * 2);
+            c.fillStyle = 'rgba(60,30,10,0.7)';
+            c.fill();
+        }
+        const snapIdx = Math.min(this.replayIndex, this.game.snapshots.length - 1);
+        const board = this.game.snapshots[snapIdx];
+        const radius = cellSize * 0.43;
+        for (let y = 0; y < bs; y++) {
+            for (let x = 0; x < bs; x++) {
+                if (board[y][x] !== 0) {
+                    this.drawStone(c, margin + x * cellSize, margin + y * cellSize, radius, board[y][x] === 1);
+                }
+            }
+        }
+        if (this.replayIndex > 0 && this.replayIndex <= this.game.history.length) {
+            const move = this.game.history[this.replayIndex - 1];
+            if (move.x >= 0 && move.y >= 0) {
+                const cx = margin + move.x * cellSize;
+                const cy = margin + move.y * cellSize;
+                c.beginPath();
+                c.arc(cx, cy, radius * 0.35, 0, Math.PI * 2);
+                c.strokeStyle = move.player === 1 ? '#fff' : '#000';
+                c.lineWidth = 1.5;
+                c.stroke();
+            }
+        }
+        for (const km of this.keyMoves) {
+            if (km.index < this.replayIndex && km.index < this.game.history.length) {
+                const move = this.game.history[km.index];
+                if (move.x >= 0 && move.y >= 0) {
+                    const cx = margin + move.x * cellSize;
+                    const cy = margin + move.y * cellSize - radius - 4;
+                    c.beginPath();
+                    c.moveTo(cx, cy);
+                    c.lineTo(cx - 5, cy - 8);
+                    c.lineTo(cx + 5, cy - 8);
+                    c.closePath();
+                    c.fillStyle = '#cc2200';
+                    c.fill();
+                }
+            }
+        }
+        const info = document.getElementById('rpMoveInfo');
+        if (this.replayIndex === 0) {
+            info.textContent = 'Beginning';
+        } else if (this.replayIndex <= this.game.history.length) {
+            const m = this.game.history[this.replayIndex - 1];
+            const who = m.player === 1 ? 'Black' : 'White';
+            const coord = m.x >= 0 ? this.coordToStr(m.x, m.y) : 'Pass';
+            info.textContent = `Move ${m.moveNumber}: ${who} ${coord}`;
+        }
+        const comment = document.getElementById('rpComment');
+        if (this.replayIndex === 0) {
+            comment.textContent = 'Starting position.';
+        } else if (this.replayIndex <= this.game.history.length) {
+            const m = this.game.history[this.replayIndex - 1];
+            const who = m.player === 1 ? 'Black' : 'White';
+            const coord = m.x >= 0 ? this.coordToStr(m.x, m.y) : 'Pass';
+            const intent = this.moveIntents[m.moveNumber] || '';
+            const isKey = this.keyMoves.some(km => km.index === this.replayIndex - 1);
+            let text = `${who} played ${coord}`;
+            if (intent) text += ` — ${intent}`;
+            if (m.captured && m.captured.length > 0) text += `, captured ${m.captured.length} stones`;
+            if (isKey) text += ' ★ Key Move';
+            comment.textContent = text;
+        }
+    }
+    render() {
+        const c = this.ctx;
+        const s = this.canvasLogicSize;
+        const m = this.margin;
+        const cs = this.cellSize;
+        const bs = this.boardSize;
+        const dpr = window.devicePixelRatio || 1;
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        c.drawImage(this.woodTexture, 0, 0, s, s);
+
+        if (this.showHeatmap) {
+            const inf = this.game.calculateInfluence();
+            for (let y = 0; y < bs; y++) {
+                for (let x = 0; x < bs; x++) {
+                    const val = inf[y][x];
+                    if (Math.abs(val) > 0.1) {
+                        const cx = m + x * cs;
+                        const cy = m + y * cs;
+                        const r = cs * 0.42;
+                        if (val > 0) {
+                            c.fillStyle = `rgba(180,40,20,${Math.min(0.35, val * 0.15)})`;
+                        } else {
+                            c.fillStyle = `rgba(40,80,180,${Math.min(0.35, Math.abs(val) * 0.15)})`;
+                        }
+                        c.fillRect(cx - r, cy - r, r * 2, r * 2);
+                    }
+                }
+            }
+        }
+
+        if (this.showTerritory) {
+            const sc = this.game.calculateScore();
+            for (let y = 0; y < bs; y++) {
+                for (let x = 0; x < bs; x++) {
+                    if (sc.territory[y][x] !== 0 && this.game.board[y][x] === 0) {
+                        const cx = m + x * cs;
+                        const cy = m + y * cs;
+                        const r = cs * 0.15;
+                        c.beginPath();
+                        c.arc(cx, cy, Math.max(1, r), 0, Math.PI * 2);
+                        c.fillStyle = sc.territory[y][x] === 1 ? 'rgba(20,20,20,0.5)' : 'rgba(240,240,240,0.7)';
+                        c.fill();
+                        if (sc.territory[y][x] === 2) {
+                            c.strokeStyle = 'rgba(150,150,150,0.5)';
+                            c.lineWidth = 0.5;
+                            c.stroke();
+                        }
+                    }
+                }
+            }
+        }
+
+        c.strokeStyle = 'rgba(60,30,10,0.65)';
+        c.lineWidth = 0.9;
+        for (let i = 0; i < bs; i++) {
+            c.beginPath();
+            c.moveTo(m + i * cs, m);
+            c.lineTo(m + i * cs, m + (bs - 1) * cs);
+            c.stroke();
+            c.beginPath();
+            c.moveTo(m, m + i * cs);
+            c.lineTo(m + (bs - 1) * cs, m + i * cs);
+            c.stroke();
+        }
+        c.strokeStyle = 'rgba(60,30,10,0.8)';
+        c.lineWidth = 2;
+        c.strokeRect(m, m, (bs - 1) * cs, (bs - 1) * cs);
+
+        const stars = bs === 9 ? [[2,2],[2,6],[6,2],[6,6],[4,4]] :
+                      bs === 13 ? [[3,3],[3,9],[9,3],[9,9],[6,6],[3,6],[6,3],[6,9],[9,6]] : [];
+        for (const [sx, sy] of stars) {
+            c.beginPath();
+            c.arc(m + sx * cs, m + sy * cs, Math.max(2.5, cs * 0.09), 0, Math.PI * 2);
+            c.fillStyle = 'rgba(60,30,10,0.75)';
+            c.fill();
+        }
+        c.font = `${Math.max(9, cs * 0.28)}px 'Noto Sans SC',sans-serif`;
+        c.fillStyle = 'rgba(60,30,10,0.45)';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        const letters = 'ABCDEFGHJKLMNOPQRST';
+        for (let i = 0; i < bs; i++) {
+            c.fillText(letters[i], m + i * cs, m - cs * 0.5);
+            c.fillText(letters[i], m + i * cs, m + (bs - 1) * cs + cs * 0.5);
+        }
+        c.textAlign = 'center';
+        for (let i = 0; i < bs; i++) {
+            c.fillText(String(bs - i), m - cs * 0.5, m + i * cs);
+            c.fillText(String(bs - i), m + (bs - 1) * cs + cs * 0.5, m + i * cs);
+        }
+
+        const radius = cs * 0.44;
+        for (let y = 0; y < bs; y++) {
+            for (let x = 0; x < bs; x++) {
+                if (this.game.board[y][x] !== 0) {
+                    this.drawStone(c, m + x * cs, m + y * cs, radius, this.game.board[y][x] === 1);
+                }
+            }
+        }
+        if (this.lastMove && this.lastMove.x >= 0) {
+            const cx = m + this.lastMove.x * cs;
+            const cy = m + this.lastMove.y * cs;
+            c.beginPath();
+            c.arc(cx, cy, radius * 0.35, 0, Math.PI * 2);
+            c.strokeStyle = this.lastMove.player === 1 ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)';
+            c.lineWidth = 1.8;
+            c.stroke();
+        }
+        if (this.hoverPos && !this.isAIThinking && !this.game.gameOver && this.game.currentPlayer === 1) {
+            const [hx, hy] = this.hoverPos;
+            if (this.game.board[hy][hx] === 0 && this.game.isLegalMove(hx, hy)) {
+                this.drawStone(c, m + hx * cs, m + hy * cs, radius, true, 0.35);
+            }
+        }
+    }
+
+    drawStone(c, cx, cy, r, isBlack, alpha = 1) {
+        c.save();
+        c.globalAlpha = alpha;
+        c.beginPath();
+        c.arc(cx + r * 0.15, cy + r * 0.15, r * 0.95, 0, Math.PI * 2);
+        c.fillStyle = 'rgba(0,0,0,0.3)';
+        c.fill();
+        const grad = c.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+        if (isBlack) {
+            grad.addColorStop(0, '#555');
+            grad.addColorStop(1, '#111');
+        } else {
+            grad.addColorStop(0, '#fff');
+            grad.addColorStop(1, '#ccc');
+        }
+        c.beginPath();
+        c.arc(cx, cy, r, 0, Math.PI * 2);
+        c.fillStyle = grad;
+        c.fill();
+        if (!isBlack) {
+            c.strokeStyle = 'rgba(0,0,0,0.1)';
+            c.lineWidth = 0.5;
+            c.stroke();
+        }
+        c.restore();
+    }
+}
+
+window.onload = () => {
+    const app = new GoApp();
+};
+
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        this.beginPath();
+        this.moveTo(x + r, y);
+        this.arcTo(x + w, y, x + w, y + h, r);
+        this.arcTo(x + w, y + h, x, y + h, r);
+        this.arcTo(x, y + h, x, y, r);
+        this.arcTo(x, y, x + w, y, r);
+        this.closePath();
+        return this;
+    };
+}
+</script>
+</body>
+</html>
